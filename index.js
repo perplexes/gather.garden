@@ -3,20 +3,20 @@ const express = require("express");
 const { createClient } = require('@supabase/supabase-js');
 
 // Using anon key
-const supabase = createClient('https://uumbjbosyllctxqzzrja.supabase.co', process.env.SUPABASE_KEY, {auth: {persistSession: false}});
+const supabase = createClient('https://uumbjbosyllctxqzzrja.supabase.co', process.env.SUPABASE_KEY, { auth: { persistSession: false } });
 
 const WebSocket = require("ws");
 const WaveFile = require("wavefile").WaveFile;
 
 const app = express();
-app.use(express.urlencoded({extended: false}))
+app.use(express.urlencoded({ extended: false }))
 // app.use(express.json());
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
 const postmark = require("postmark");
 
 // Send an email:
-const client = new postmark.ServerClient(process.env.POSTMARK_API_KEY);
+const postmarkClient = new postmark.ServerClient(process.env.POSTMARK_API_KEY);
 
 const { Configuration, OpenAIApi } = require("openai");
 
@@ -124,7 +124,7 @@ wss.on("connection", (ws) => {
         }).then((res) => {
           var content = res.data.choices[0].message.content;
           console.log(content)
-          client.sendEmail({
+          postmarkClient.sendEmail({
             "From": "ideas@gather.garden",
             "To": "ideas@gather.garden",
             "Subject": "Your latest idea",
@@ -186,17 +186,17 @@ app.post("/sms", async (req, res) => {
 
   var results = await supabase.from('accounts').select('email').eq('phone', phone);
   console.log(results);
-  if(results.data.length > 0){
+  if (results.data.length > 0) {
     console.log('found phone');
     previousEmail = results.data[0].email;
-    var update = await supabase.from('accounts').update({email: email}).eq('phone', phone);
+    var update = await supabase.from('accounts').update({ email: email }).eq('phone', phone);
     console.log(update);
   } else {
     console.log('not found phone');
-    var insert = await supabase.from('accounts').insert({phone: phone, email: email});
+    var insert = await supabase.from('accounts').insert({ phone: phone, email: email });
     console.log(insert);
   }
-  
+
   res.send(
     `<Response>
       <Message><Body>I've now associated your number ${phone} to ${email}. Your previous email was ${previousEmail}</Body></Message>
