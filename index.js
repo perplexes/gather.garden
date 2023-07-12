@@ -1,6 +1,8 @@
 // https://raw.githubusercontent.com/AssemblyAI/twilio-realtime-tutorial/master/transcribe.js
+// import { Database } from '../types/supabase'
 const express = require("express");
 const { createClient } = require('@supabase/supabase-js');
+
 
 // Using anon key
 const supabase = createClient('https://uumbjbosyllctxqzzrja.supabase.co', process.env.SUPABASE_KEY, { auth: { persistSession: false } });
@@ -29,14 +31,45 @@ let assembly;
 
 var last_receive = new Date();
 
+async function summarize_and_send(email, transcription) {
+  var gptRes = await openai.createChatCompletion({
+    model: "gpt-4",
+    messages: [{ role: "system", content: "Please summarize the ideas in this transcription using a warm, friendly, and encouraging but not cloying tone for them to build the idea." }, { role: "user", content: transcription }],
+  })
+
+  var content = gptRes.data.choices[0].message.content;
+  console.log(content)
+  // store in supabase
+  var insertRes = await supabase.from("ideas")
+    .insert({ transcription: transcription, llm_summary: content, phone: from })
+    .select();
+
+  console.log(insertRes);
+
+  if (email) {
+    postmarkClient.sendEmail({
+      "From": "ideas@gather.garden",
+      "To": email,
+      "Subject": "Your latest idea",
+      "TextBody": content,
+    });
+
+    supabase.from("ideas")
+      .update({ email_sent_at: new Date() })
+      .eq("id", insertRes.data[0].id);
+  }
+}
+
 wss.on("connection", (ws) => {
   let transcription = '';
+  let email = null;
   const texts = {};
   var bytes = 0;
   let chunks = [];
   console.info("New Connection Initiated");
   assembly.onmessage = (assemblyMsg) => {
     const res = JSON.parse(assemblyMsg.data);
+    console.log()
     // console.log("message from assembly");
     // console.log(res);
 
@@ -46,6 +79,7 @@ wss.on("connection", (ws) => {
     keys.sort((a, b) => a - b);
     for (const key of keys) {
       if (texts[key]) {
+        console.log(`[${key}] ${texts[key]}`);
         transcription += ` ${texts[key]}`;
       }
     }
@@ -73,7 +107,28 @@ wss.on("connection", (ws) => {
         break;
 
       case "start":
-        console.info("Starting media stream...");
+        console.info("Starting media stream and looking up user...");
+        console.log(msg);
+        from = msg.start.customParameters.From;
+        to = msg.start.customParameters.To;
+        supabase
+          .from("accounts").select("email").eq("phone", from)
+          .then((results) => {
+            console.log(results);
+            if (results.data.length > 0) {
+              email = results.data[0].email;
+              console.log(`Found email: ${email}`)
+            } else {
+              twilioClient.messages
+                .create({
+                  body: "Thanks for trying out Gather Garden. What's your email address so Ic an send your ideas?",
+                  from: to,
+                  to: from,
+                });
+            }
+          });
+
+
         break;
 
       case "media":
@@ -118,19 +173,7 @@ wss.on("connection", (ws) => {
       case "stop":
         console.info("Call has ended");
         assembly.send(JSON.stringify({ terminate_session: true }));
-        openai.createChatCompletion({
-          model: "gpt-4",
-          messages: [{ role: "system", content: "Please summarize the ideas in this transcription using a warm, friendly, and encouraging tone for them to build the idea." }, { role: "user", content: transcription }],
-        }).then((res) => {
-          var content = res.data.choices[0].message.content;
-          console.log(content)
-          postmarkClient.sendEmail({
-            "From": "ideas@gather.garden",
-            "To": "ideas@gather.garden",
-            "Subject": "Your latest idea",
-            "TextBody": content,
-          });
-        });
+        summarize_and_send(email, transcription);
         break;
     }
   });
@@ -145,10 +188,15 @@ app.post("/", async (req, res) => {
     { headers: { authorization: process.env.APIKEY } }
   );
   res.set("Content-Type", "text/xml");
+  var from = req.body.From;
+  var to = req.body.To;
   res.send(
     `<Response>
        <Start>
-         <Stream url='wss://${req.headers.host}' />
+         <Stream url='wss://${req.headers.host}'>
+          <Parameter name="From" value="${from}" />
+          <Parameter name="To" value="${to}" />
+        </Stream>
        </Start>
        <Say>
          Start talking and I'll summarize all your ideas for you and send it to your email address.
