@@ -1,0 +1,22 @@
+{
+  "name": "nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.26.0",
+    "@types/node": "^18.0.6",
+    "express": "^4.18.2",
+    "node-fetch": "^3.2.6",
+    "openai": "^3.3.0",
+    "postmark": "^3.0.18",
+    "wavefile": "^11.0.0",
+    "ws": "^8.13.0"
+  }
+}
