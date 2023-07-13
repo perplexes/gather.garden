@@ -1,13 +1,14 @@
-const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+import twilio from 'twilio';
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-const { VoiceResponse, MessagingResponse } = twilioClient.twiml;
+const { VoiceResponse, MessagingResponse } = twilio.twiml;
 
-async function sendMessage(to, message) {
+async function sendMessage(to: string, messageString: string) {
   try {
     const message = await twilioClient.messages.create({
       to: to,
       from: process.env.TWILIO_PHONE_NUMBER,
-      body: message
+      body: messageString,
     });
     console.log(`Message sent to ${to}: ${message.sid}`);
   } catch (error) {
@@ -17,7 +18,7 @@ async function sendMessage(to, message) {
 
 function setEmailMessageResponse(from: string, email: string, previousEmail: string) {
   const messagingResponse = new MessagingResponse();
-  messagingResponse.message(`I've now associated your number ${phone} to ${email}. Your previous email was ${previousEmail}`);
+  messagingResponse.message(`I've now associated your number ${from} to ${email}. Your previous email was ${previousEmail}`);
   return messagingResponse;
 }
 
@@ -47,4 +48,4 @@ function inprogressVoiceResponse(sendGoOn: boolean, redirectUrl: string) {
   return voiceResponse.toString();
 }
 
-export { sendMessage, welcomeVoiceResponse }
+export { sendMessage, welcomeVoiceResponse, inprogressVoiceResponse, setEmailMessageResponse }
