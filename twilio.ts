@@ -18,19 +18,24 @@ async function sendMessage(to: string, messageString: string) {
 
 function setEmailMessageResponse(from: string, email: string, previousEmail: string) {
   const messagingResponse = new MessagingResponse();
-  messagingResponse.message(`I've now associated your number ${from} to ${email}. Your previous email was ${previousEmail}`);
+  if (email.includes('@')) {
+    messagingResponse.message(`I've now associated your number ${from} to ${email}. Your previous email was ${previousEmail}`);
+  } else {
+    messagingResponse.message("Please enter a valid email address.");
+  }
   return messagingResponse;
 }
 
-function welcomeVoiceResponse(from: string, to: string, streamUrl: string, redirectUrl: string) {
+function welcomeVoiceResponse(from: string, to: string, email: string, streamUrl: string, redirectUrl: string) {
   let voiceResponse = new VoiceResponse();
 
-  let stream = voiceResponse.start().stream();
+  let stream = voiceResponse.start().stream({ url: streamUrl });
   stream.parameter({ name: 'From', value: from });
   stream.parameter({ name: 'To', value: to });
-  stream.url(streamUrl);
+  stream.parameter({ name: 'email', value: email });
 
   voiceResponse.say('Start talking and I\'ll summarize all your ideas for you and send it to your email address.');
+  // voiceResponse.say('Go');
   voiceResponse.pause({ length: 10 });
   voiceResponse.redirect(redirectUrl);
 

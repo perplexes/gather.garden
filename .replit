@@ -29,3 +29,9 @@ pattern = "**/{*.ts,*.js,*.tsx,*.jsx,*.json}"
 
 [languages.typescript.languageServer]
 start = "typescript-language-server --stdio"
+
+[deployment]
+build = ["sh", "-c", ".config/build.sh"]
+run = ["sh", "-c", "node .build/index.js"]
+ignorePorts = false
+deploymentTarget = "gce"

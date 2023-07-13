@@ -24,7 +24,7 @@ app.post("/", async (req: Request, res: Response) => {
         sendMessage(req.body.From, "Thanks for trying out Gather Garden. What's your email address so I can send your ideas to it?");
     }
 
-    const response = welcomeVoiceResponse(req.body.From, req.body.To, `wss://${req.headers.host}`, `https://${req.headers.host}/inprogress`);
+    const response = welcomeVoiceResponse(req.body.From, req.body.To, email, `wss://${req.headers.host}`, `https://${req.headers.host}/inprogress`);
     res.send(response);
 });
 
