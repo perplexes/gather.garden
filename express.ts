@@ -50,8 +50,9 @@ app.post("/sms", async (req: Request, res: Response) => {
       console.log(idea);
       const id = idea.id;
       const transcription = idea.transcription;
+      const llm_subject = idea.llm_subject;
       const llm_summary = idea.llm_summary;
-      sendIdea(newEmail, transcription, llm_summary, id);
+      sendIdea(newEmail, transcription, llm_subject, llm_summary, id);
     });
   }
 

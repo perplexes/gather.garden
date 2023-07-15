@@ -13,11 +13,11 @@ const configuration: Configuration = new Configuration({
 });
 const openai: OpenAIApi = new OpenAIApi(configuration);
 
-async function sendIdea(email: string, transcription: string, llm_summary: string, id: number) {
+async function sendIdea(email: string, transcription: string, llm_subject: string, llm_summary: string, id: number) {
   let emailData = {
     "From": "ideas@gather.garden",
     "To": email,
-    "Subject": "Your latest idea",
+    "Subject": llm_subject,
     "TextBody": `Summary: ${llm_summary}\n\n\nTranscription: ${transcription}`,
   };
   console.log("Sending to email: ");
@@ -38,10 +38,19 @@ async function summarize_and_send(phone: string, email: string | null, transcrip
 
   const llm_summary: string = choices[0].message.content;
   console.log(llm_summary)
-  const id = await insertIdea(transcription, llm_summary, phone);
+
+  const { data: { subjectChoices } }: any = await openai.createChatCompletion({
+    model: "gpt-4",
+    messages: [{ role: "system", content: "Please create a terse email subject line of the following idea or ideas in the below transcription using a warm, friendly, and encouraging but not cloying tone for them to build the idea." }, { role: "user", content: transcription }],
+  });
+
+  const llm_subject: string = subjectChoices[0].message.content;
+  console.log(llm_subject)
+
+  const id = await insertIdea(transcription, llm_subject, llm_summary, phone);
 
   if (email && email.includes('@')) {
-    sendIdea(email, transcription, llm_summary, id);
+    sendIdea(email, transcription, llm_subject, llm_summary, id);
   }
 }
 

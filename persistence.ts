@@ -27,9 +27,9 @@ async function unsentIdeas(phone: string) {
   return data;
 }
 
-async function insertIdea(transcription: string, llm_summary: string, phone: string) {
+async function insertIdea(transcription: string, llm_subject: string, llm_summary: string, phone: string) {
   const insertRes: any = await supabase.from("ideas")
-    .insert({ transcription, llm_summary, phone })
+    .insert({ transcription, llm_subject, llm_summary, phone })
     .select();
 
   return insertRes.data[0].id;
