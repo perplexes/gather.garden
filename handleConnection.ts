@@ -13,6 +13,20 @@ const configuration: Configuration = new Configuration({
 });
 const openai: OpenAIApi = new OpenAIApi(configuration);
 
+async function sendIdea(email: string, transcription: string, llm_summary: string, id: number) {
+  let emailData = {
+    "From": "ideas@gather.garden",
+    "To": email,
+    "Subject": "Your latest idea",
+    "TextBody": `Summary: ${llm_summary}\n\n\nTranscription: ${transcription}`,
+  };
+  console.log("Sending to email: ");
+  console.log(emailData);
+  let pcResult = await postmarkClient.sendEmail(emailData);
+  console.log(pcResult);
+  let usaResult = await updateSentAt(id, new Date());
+  console.log(usaResult);
+}
 async function summarize_and_send(phone: string, email: string | null, transcription: string) {
   console.log("summarize_and_send");
   console.log({ phone, email, transcription });
@@ -22,23 +36,12 @@ async function summarize_and_send(phone: string, email: string | null, transcrip
     messages: [{ role: "system", content: "Please summarize the idea or ideas in this transcription using a warm, friendly, and encouraging but not cloying tone for them to build the idea." }, { role: "user", content: transcription }],
   });
 
-  const content: string = choices[0].message.content;
-  console.log(content)
-  const id = await insertIdea(transcription, content, phone);
+  const llm_summary: string = choices[0].message.content;
+  console.log(llm_summary)
+  const id = await insertIdea(transcription, llm_summary, phone);
 
   if (email && email.includes('@')) {
-    let emailData = {
-      "From": "ideas@gather.garden",
-      "To": email,
-      "Subject": "Your latest idea",
-      "TextBody": `Summary: ${content}\n\n\nTranscription: ${transcription}`,
-    };
-    console.log("Sending to email: ");
-    console.log(emailData);
-    let pcResult = await postmarkClient.sendEmail(emailData);
-    console.log(pcResult);
-    let usaResult = await updateSentAt(id, new Date());
-    console.log(usaResult);
+    sendIdea(email, transcription, llm_summary, id);
   }
 }
 
@@ -64,7 +67,8 @@ async function handleConnection(ws: WebSocket): Promise<void> {
         break;
 
       case "media":
-        await assembly.waitToOpen();
+        // Try buffering instead
+        // await assembly.waitToOpen();
         const twilioData = msg.media.payload;
 
         // Here are the current options explored using the WaveFile lib:
@@ -89,7 +93,7 @@ async function handleConnection(ws: WebSocket): Promise<void> {
         chunks.push(tabNoHeader);
 
         // We have to chunk data b/c twilio sends audio durations of ~20ms and AAI needs a min of 100ms
-        if (chunks.length >= 5) {
+        if (assembly.isOpen() && chunks.length >= 5) {
           // Here we want to concat our buffer to create one single buffer
           const audioBuffer = Buffer.concat(chunks);
 
@@ -104,13 +108,18 @@ async function handleConnection(ws: WebSocket): Promise<void> {
 
         break;
 
+      // Need to delay until transcription is settled BUT CANNOT BLOCK!
+      // Blocking this thread means that the transcription will not be processed in time.
+      // TODO: Real solution is pub/sub. Publish the audio streaming data as it comes in. A separate worker thread will consume the data and process it. At this point we send a tombstone. When worker thread sees tombstone, setup a timeout that will continue stream processing until transcription is settled. Then send summary.
       case "stop":
         console.info("Call has ended");
-        assembly.send(JSON.stringify({ terminate_session: true }));
+        // setTimeout(async () => {
         summarize_and_send(From, email, assembly.transcription);
+        // }, 10000);
+
         break;
     }
   });
 }
 
-export default handleConnection;
+export { handleConnection, sendIdea };

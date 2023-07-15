@@ -17,6 +17,16 @@ async function findEmail(phone: string) {
   }
 }
 
+async function unsentIdeas(phone: string) {
+  const { data, error } = await supabase
+    .from('ideas')
+    .select('*')
+    .is('sent_to_email_at', null)
+    .eq('phone', phone);
+
+  return data;
+}
+
 async function insertIdea(transcription: string, llm_summary: string, phone: string) {
   const insertRes: any = await supabase.from("ideas")
     .insert({ transcription, llm_summary, phone })
@@ -32,12 +42,18 @@ async function updateSentAt(id: number, sent_to_email_at: Date) {
 }
 
 async function updateEmail(phone: string, oldEmail: string, newEmail: string) {
-  if (oldEmail) {
-    console.log('not found phone');
-    return await supabase.from('accounts').insert({ phone: phone, email: newEmail });
+  console.log({ phone, oldEmail, newEmail });
+  if (oldEmail === null) {
+    console.log('not found email');
+    const result = await supabase.from('accounts').insert({ phone: phone, email: newEmail });
+    console.log(result);
+    return result;
   }
 
-  return await supabase.from('accounts').update({ email: oldEmail }).eq('phone', phone);
+  console.log("Found old email")
+  const result = await supabase.from('accounts').update({ email: oldEmail }).eq('phone', phone);
+  console.log(result);
+  return result;
 }
 
-export { findEmail, insertIdea, updateSentAt, updateEmail };
+export { findEmail, insertIdea, updateSentAt, updateEmail, unsentIdeas };

@@ -16,17 +16,17 @@ async function sendMessage(to: string, messageString: string) {
   }
 }
 
-function setEmailMessageResponse(from: string, email: string, previousEmail: string) {
+function setEmailMessageResponse(from: string, email: string, previousEmail: string): string {
   const messagingResponse = new MessagingResponse();
   if (email.includes('@')) {
     messagingResponse.message(`I've now associated your number ${from} to ${email}. Your previous email was ${previousEmail}`);
   } else {
     messagingResponse.message("Please enter a valid email address.");
   }
-  return messagingResponse;
+  return messagingResponse.toString();
 }
 
-function welcomeVoiceResponse(from: string, to: string, email: string, streamUrl: string, redirectUrl: string) {
+function welcomeVoiceResponse(from: string, to: string, email: string, streamUrl: string, redirectUrl: string): string {
   let voiceResponse = new VoiceResponse();
 
   let stream = voiceResponse.start().stream({ url: streamUrl });
@@ -42,7 +42,7 @@ function welcomeVoiceResponse(from: string, to: string, email: string, streamUrl
   return voiceResponse.toString();
 }
 
-function inprogressVoiceResponse(sendGoOn: boolean, redirectUrl: string) {
+function inprogressVoiceResponse(sendGoOn: boolean, redirectUrl: string): string {
   let voiceResponse = new VoiceResponse();
   if (sendGoOn) {
     voiceResponse.say('Go on.');

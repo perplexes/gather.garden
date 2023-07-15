@@ -57,6 +57,19 @@ class Assembly {
     }
   }
 
+  async waitToSettle() {
+    await sleep(10000);
+  }
+
+  async terminate() {
+    await this.waitToSettle();
+    this.websocket.send(JSON.stringify({ terminate_session: true }));
+  }
+
+  isOpen() {
+    return this.websocket.readyState === WebSocket.OPEN;
+  }
+
   send(data: string) {
     this.websocket.send(data);
   }
